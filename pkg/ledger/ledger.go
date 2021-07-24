@@ -17,11 +17,11 @@ type Transaction struct {
 	Date       time.Time
 	Payee      string
 	Comment    string
-	Categories []Account
-	Payers     []Account
+	Categories []Entry
+	Payers     []Entry
 }
 
-type Account struct {
+type Entry struct {
 	Name   string
 	Amount usd.USD
 }

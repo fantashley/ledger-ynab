@@ -76,7 +76,7 @@ func loadTransactions(path string) ([]Transaction, error) {
 				continue
 			}
 
-			account := Account{
+			account := Entry{
 				Name:   chunks[0],
 				Amount: amt,
 			}

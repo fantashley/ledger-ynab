@@ -90,7 +90,7 @@ func (o *ListAccountTransactionsOptions) Values() url.Values {
 	vals := url.Values{}
 
 	if !o.SinceDate.IsZero() {
-		vals.Set("since_date", o.SinceDate.Format("2006-01-02"))
+		vals.Set("since_date", o.SinceDate.Format(DateFormat))
 	}
 	if o.Type != "" {
 		vals.Set("type", o.Type)
