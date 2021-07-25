@@ -94,5 +94,9 @@ func loadTransactions(path string) ([]Transaction, error) {
 		log.Printf("Could not classify line %d: %q", lineNum, currentLine)
 	}
 
+	if err = currentTx.Validate(); err == nil {
+		transactions = append(transactions, currentTx)
+	}
+
 	return transactions, nil
 }

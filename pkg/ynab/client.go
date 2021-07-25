@@ -5,11 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -55,26 +59,45 @@ func (c *Client) CreateTransactions(ctx context.Context, transactions []Transact
 		Transactions: transactions,
 	}
 
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(request); err != nil {
-		return fmt.Errorf("failed to encode request: %w", err)
+	// var buf bytes.Buffer
+	// if err := json.NewEncoder(&buf).Encode(request); err != nil {
+	// 	return fmt.Errorf("failed to encode request: %w", err)
+	// }
+
+	// body := bytes.NewReader(buf.Bytes())
+
+	reqBytes, err := json.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	body := bytes.NewReader(buf.Bytes())
+	log.Debugf("Create tx request body: %v", string(reqBytes))
 
-	url := path.Join(c.apiURL.String(), APIPath, "budgets", c.config.BudgetID, "transactions")
-	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
+	url := *c.apiURL
+	url.Path = path.Join(url.Path, APIPath, "budgets", c.config.BudgetID, "transactions")
+	req, err := http.NewRequestWithContext(ctx, "POST", url.String(), bytes.NewReader(reqBytes))
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
 
 	req.Header.Add("Authorization", "Bearer "+c.config.PersonalAccessToken)
+	req.Header.Add("Content-Type", jsonMimeType)
+	log.Debugf("Request: %+v", req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("create transaction request failed: %w", err)
 	}
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("received status code of %d", resp.StatusCode)
+		var statusErr error
+		statusErr = multierror.Append(statusErr, fmt.Errorf("received status code of %d", resp.StatusCode))
+
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return multierror.Append(statusErr, fmt.Errorf("error reading response body: %w", err))
+		}
+		defer resp.Body.Close()
+
+		return multierror.Append(statusErr, fmt.Errorf("response body: %v", string(respBody)))
 	}
 
 	return nil
